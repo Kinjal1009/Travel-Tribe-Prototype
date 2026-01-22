@@ -1,0 +1,8 @@
+{
+  "name": "Travel Tribe",
+  "description": "Premium travel platform for curated group trips across India with vibe-matching and trust-based social networking.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

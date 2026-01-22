@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Travel Tribe - Premium Travel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        /* Material 3 Color Tokens (Blue Baseline) */
+        --md-sys-color-primary: #0A3D91;
+        --md-sys-color-on-primary: #FFFFFF;
+        --md-sys-color-primary-container: #D7E2FF;
+        --md-sys-color-on-primary-container: #001A40;
+        --md-sys-color-secondary: #565E71;
+        --md-sys-color-on-secondary: #FFFFFF;
+        --md-sys-color-surface: #F8FAFF;
+        --md-sys-color-on-surface: #1B1B1F;
+        --md-sys-color-surface-variant: #E1E2EC;
+        --md-sys-color-on-surface-variant: #44474F;
+        --md-sys-color-outline: #74777F;
+        --md-sys-color-error: #BA1A1A;
+        
+        --nav-h: 64px;
+        --bottom-nav-h: 80px;
+      }
+
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background-color: var(--md-sys-color-surface);
+        overflow-x: hidden;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        color: var(--md-sys-color-on-surface);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #root {
+        min-height: 100vh;
+        background-color: var(--md-sys-color-surface);
+        position: relative;
+      }
+
+      /* M3 Utilities */
+      .m3-card {
+        background: var(--md-sys-color-surface-variant);
+        border-radius: 16px;
+        padding: 16px;
+      }
+      .m3-card-elevated {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      }
+      
+      /* Smooth scrolling */
+      html {
+        scroll-behavior: smooth;
+      }
+
+      /* Hide scrollbars for cleaner mobile look while allowing desktop scroll */
+      @media (max-width: 768px) {
+        ::-webkit-scrollbar {
+          display: none;
+        }
+      }
+
+      /* Transitions */
+      .page-transition {
+        animation: fadeIn 0.3s ease-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.37.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
