@@ -130,7 +130,7 @@ RESPONSE FORMAT (JSON ONLY):
 }`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.5-flash',
         contents: contextPrompt,
         config: { responseMimeType: "application/json" }
       });
