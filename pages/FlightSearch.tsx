@@ -40,9 +40,10 @@ interface SearchParams {
 interface FlightSearchProps {
   onBack?: () => void;
   isEmbedded?: boolean;
+  onPropose?: (flight: Flight) => void;
 }
 
-const FlightSearch: React.FC<FlightSearchProps> = ({ onBack, isEmbedded = false }) => {
+const FlightSearch: React.FC<FlightSearchProps> = ({ onBack, isEmbedded = false, onPropose }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -160,15 +161,13 @@ RESPONSE FORMAT (JSON ONLY):
 
           const flightCards = (
             <div className="space-y-3 mt-2">
-              <p className="text-gray-400 text-[8px] font-black uppercase tracking-widest mb-2">Matches for your tribe:</p>
+              <p className="text-gray-400 text-[8px] font-black uppercase tracking-widest mb-2 text-left">Matches for your tribe:</p>
               {sortedFlights.slice(0, 5).map((flight, idx) => (
-                <M3Card key={idx} className="p-4 border border-gray-100 transition-all hover:border-[#0A3D91]/20 relative overflow-hidden shadow-sm">
-
+                <M3Card key={idx} className="p-4 border border-gray-100 transition-all hover:border-[#0A3D91]/20 relative overflow-hidden shadow-sm text-left">
                   <div className="flex justify-between items-start mb-3">
                     <span className="font-black text-[#0A3D91] text-[10px] uppercase tracking-widest">{flight.airline}</span>
                     <span className="text-[7px] text-gray-400 font-black uppercase tracking-widest">{flight.stops === 0 ? 'Non-stop' : `${flight.stops} stops`}</span>
                   </div>
-                  
                   <div className="flex items-center gap-4 text-gray-400 text-[8px] font-black uppercase tracking-widest">
                     <div className="flex flex-col">
                       <span className="text-[#0F172A] text-sm font-black">{flight.departure_time || flight.departure}</span>
@@ -176,21 +175,18 @@ RESPONSE FORMAT (JSON ONLY):
                     </div>
                     <div className="flex-grow relative flex items-center">
                       <div className="h-px bg-gray-100 w-full" />
-                      <div className="absolute left-1/2 -translate-x-1/2 bg-white px-1.5 text-[10px]">
-                        ✈️
-                      </div>
+                      <div className="absolute left-1/2 -translate-x-1/2 bg-white px-1.5 text-[10px]">✈️</div>
                     </div>
                     <div className="flex flex-col text-right">
                       <span className="text-[#0F172A] text-sm font-black">{flight.arrival_time || flight.arrival}</span>
                       <span className="text-gray-400">{newParams.destination}</span>
                     </div>
                   </div>
-
-                  <div className="mt-6 flex justify-between items-center pt-4 border-t border-gray-50">
+                  <div className="mt-6 flex justify-between gap-2 items-center pt-4 border-t border-gray-50">
                     <span className="font-black text-gray-900 text-lg">₹{flight.price.toLocaleString()} {flight === flightData.flights[0] ? '⭐' : ''}</span>
-                    <M3Button variant={idx === 0 ? 'filled' : 'tonal'} className="!h-9 !px-6 text-[9px]" onClick={() => window.open(flight.extensions?.[0] || 'https://www.google.com/travel/flights', '_blank')}>
-                      BOOK NOW
-                    </M3Button>
+                    <div className="flex gap-2">
+                      <M3Button variant={idx === 0 ? 'filled' : 'outlined'} className="!h-9 !px-4 text-[8px]" onClick={() => window.open(flight.extensions?.[0] || 'https://www.google.com/travel/flights', '_blank')}>BOOK</M3Button>
+                    </div>
                   </div>
                 </M3Card>
               ))}
@@ -209,12 +205,8 @@ RESPONSE FORMAT (JSON ONLY):
     }
   };
 
-  const containerClasses = isEmbedded 
-    ? "h-[500px] flex flex-col bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-inner relative"
-    : "fixed inset-0 z-[110] bg-[#F8FAFF] flex flex-col page-transition";
-
   return (
-    <div className={containerClasses}>
+    <div className={`flex flex-col h-full bg-white relative ${!isEmbedded ? 'fixed inset-0 z-[110] page-transition' : ''}`}>
       {/* Header - Only for Full Screen */}
       {!isEmbedded && (
         <header className="bg-white border-b border-gray-100 h-24 shrink-0 flex flex-col justify-center px-4 shadow-sm z-20">
@@ -223,11 +215,10 @@ RESPONSE FORMAT (JSON ONLY):
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"/></svg>
             </button>
             <div className="text-center">
-              <h1 className="text-xs font-black tracking-tighter">AI Booking Bot</h1>
+              <h1 className="text-xs font-black tracking-tighter uppercase italic">AI Booking Bot</h1>
             </div>
             <div className="w-10"></div>
           </div>
-
           <div className="flex justify-center gap-2 overflow-x-auto no-scrollbar py-1">
             {['origin', 'destination', 'date'].map((key) => {
               const val = (searchParams as any)[key];
@@ -242,52 +233,53 @@ RESPONSE FORMAT (JSON ONLY):
         </header>
       )}
 
-      {/* Chat Area */}
+      {/* Chat Area - Scrollable */}
       <div 
         ref={scrollRef}
-        className={`flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar ${isEmbedded ? 'pb-24' : 'pb-32'}`}
+        className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar pb-10"
       >
-        {isEmbedded && (
-          <div className="mb-4 flex items-center justify-center gap-2">
-            <div className="h-px bg-gray-100 flex-1" />
-            <span className="text-[7px] font-black text-gray-300 uppercase tracking-widest">AI Flight Concierge</span>
-            <div className="h-px bg-gray-100 flex-1" />
-          </div>
-        )}
-        {messages.map((m, i) => (
-          <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-1 duration-300`}>
-            {m.role === 'assistant' && (
-              <span className="text-[7px] font-black text-[#0A3D91] uppercase mb-1 ml-2 tracking-widest">AI Bot</span>
-            )}
-            <div className={`max-w-[90%] p-3.5 rounded-[1.25rem] shadow-sm text-[10px] font-semibold leading-relaxed ${
-              m.role === 'user' 
-                ? 'bg-[#0A3D91] text-white rounded-tr-none' 
-                : 'bg-gray-50 border border-gray-100 text-[#0F172A] rounded-tl-none'
-            }`}>
-              {m.content}
+        <div className="my-2 flex items-center justify-center gap-4">
+          <div className="h-px bg-gray-100 flex-1" />
+          <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] whitespace-nowrap">AI Flight Concierge</span>
+          <div className="h-px bg-gray-100 flex-1" />
+        </div>
+        
+        <div className="space-y-6">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-1 duration-300`}>
+              {m.role === 'assistant' && (
+                <span className="text-[10px] font-black text-[#0A3D91] uppercase mb-2 ml-1 tracking-[0.1em]">AI BOT</span>
+              )}
+              <div className={`max-w-[92%] p-5 rounded-[1.5rem] text-[13px] font-bold leading-relaxed shadow-sm border text-left ${
+                m.role === 'user' 
+                  ? 'bg-[#0A3D91] text-white rounded-tr-none border-[#0A3D91]' 
+                  : 'bg-[#F8FAFF] border-gray-100 text-[#0F172A] rounded-tl-none'
+              }`}>
+                {m.content}
+              </div>
             </div>
-          </div>
-        ))}
-        {isThinking && (
-          <div className="flex items-start">
-            <div className="bg-gray-50 border border-gray-100 p-3 rounded-2xl rounded-tl-none flex gap-1 items-center">
-              <div className="w-1 h-1 bg-[#0A3D91] rounded-full animate-bounce"></div>
-              <div className="w-1 h-1 bg-[#0A3D91] rounded-full animate-bounce [animation-delay:0.2s]"></div>
-              <div className="w-1 h-1 bg-[#0A3D91] rounded-full animate-bounce [animation-delay:0.4s]"></div>
+          ))}
+          {isThinking && (
+            <div className="flex items-start">
+              <div className="bg-[#F8FAFF] border border-gray-100 p-4 rounded-2xl rounded-tl-none flex gap-1.5 items-center">
+                <div className="w-1.5 h-1.5 bg-[#0A3D91] rounded-full animate-bounce"></div>
+                <div className="w-1.5 h-1.5 bg-[#0A3D91] rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                <div className="w-1.5 h-1.5 bg-[#0A3D91] rounded-full animate-bounce [animation-delay:0.4s]"></div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Action Tray & Input */}
-      <div className={`${isEmbedded ? 'absolute' : 'fixed'} bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-3 space-y-3 z-20 shadow-[0_-5px_15px_rgba(0,0,0,0.02)]`}>
+      {/* Action Tray & Input - Pinned to Bottom */}
+      <div className="shrink-0 bg-white border-t border-gray-50 p-4 space-y-4 z-20">
         {!isThinking && messages.length < 4 && (
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {['Fly from Delhi', 'Best fare next week', 'Indigo only'].map((s) => (
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-1">
+            {['FLY FROM DELHI', 'BEST FARE NEXT WEEK', 'INDIGO ONLY'].map((s) => (
               <button 
                 key={s} 
                 onClick={() => handleSendMessage(s)}
-                className="text-[8px] font-black uppercase tracking-widest px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-gray-400 hover:text-[#0A3D91] hover:bg-blue-50 transition-all shrink-0"
+                className="text-[9px] font-black uppercase tracking-widest px-5 py-3 bg-[#F8FAFF] border border-gray-100 rounded-xl text-gray-500 hover:text-[#0A3D91] hover:border-[#0A3D91]/20 transition-all shrink-0 active:scale-95"
               >
                 {s}
               </button>
@@ -297,21 +289,23 @@ RESPONSE FORMAT (JSON ONLY):
 
         <form 
           onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-          className="flex gap-2"
+          className="flex gap-3 items-center"
         >
-          <input 
-            type="text" 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask AI for flights..."
-            className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-full text-[10px] font-bold outline-none shadow-inner focus:bg-white focus:border-[#0A3D91] transition-all"
-          />
+          <div className="flex-1 bg-[#F8FAFF] border border-gray-100 rounded-full px-6 py-4 flex items-center shadow-inner focus-within:bg-white focus-within:border-[#0A3D91] transition-all">
+            <input 
+              type="text" 
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask AI for flights..."
+              className="flex-1 bg-transparent text-[13px] font-bold outline-none placeholder:text-gray-300"
+            />
+          </div>
           <button 
             type="submit"
             disabled={isThinking || !input.trim()}
-            className="w-9 h-9 bg-[#0A3D91] text-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all disabled:opacity-50"
+            className="w-12 h-12 bg-[#8BA2D4] hover:bg-[#0A3D91] text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all disabled:opacity-40 shrink-0"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"/></svg>
           </button>
         </form>
       </div>

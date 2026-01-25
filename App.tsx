@@ -46,7 +46,6 @@ const App: React.FC = () => {
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [intendedAction, setIntendedAction] = useState<IntendedAction | null>(null);
 
-  // Hydrate session from storage
   useEffect(() => {
     const sessionUserId = db.getSession();
     if (sessionUserId) {
@@ -55,7 +54,6 @@ const App: React.FC = () => {
         setUser(u);
       } else {
         db.setSession(null);
-        // Do not force redirect to auth if on guest-friendly pages
         if (!['home', 'about', 'contact'].includes(currentPage)) {
           setCurrentPage('auth');
         }
@@ -90,12 +88,6 @@ const App: React.FC = () => {
     setUser(next);
   }, [user]);
 
-  const isVibeFresh = (lastCheck: string | undefined): boolean => {
-    if (!lastCheck) return false;
-    const diff = (new Date().getTime() - new Date(lastCheck).getTime()) / (1000 * 60 * 60 * 24);
-    return diff < VIBE_EXPIRY_DAYS;
-  };
-
   const executeSearch = useCallback((filters: SearchFilters, vibeOverride?: VibeProfile) => {
     const rawTrips = db.getTrips(filters);
     const activeVibe = vibeOverride || user?.vibeProfile;
@@ -104,23 +96,21 @@ const App: React.FC = () => {
       vibeMatchPercent: activeVibe ? (computeVibeMatch(activeVibe, t.coTravelers) ?? 0) : 0
     }));
   
-    setSearchResults(tripsWithVibe);
+    const sorted = tripsWithVibe.sort((a, b) => (b.vibeMatchPercent || 0) - (a.vibeMatchPercent || 0));
+    setSearchResults(sorted);
     setCurrentPage('search-results');
   }, [user]);
 
   const handleSearch = (filters: SearchFilters) => {
     if (!user) {
-      setSuccessToast("Sign in to search and join trips.");
+      setSuccessToast("Sign in to personalize your tribe matches.");
       setIntendedAction({ type: 'SEARCH', filters });
       setCurrentPage('auth');
       return;
     }
     setSearchFilters(filters);
-    if (!user?.vibeProfile || !isVibeFresh(user.lastVibeCheckAt)) {
-      setShowVibeModal(true);
-    } else {
-      executeSearch(filters);
-    }
+    // Mandatory Vibe Check only for explicit Search via button
+    setCurrentPage('vibe-check');
   };
 
   const handleVibeComplete = (profile: VibeProfile) => {
@@ -132,27 +122,14 @@ const App: React.FC = () => {
   const handleAuthComplete = (u: User) => {
     db.setSession(u.id);
     setUser(u);
-    
-    // Resume intended action
     if (intendedAction) {
       const action = intendedAction;
       setIntendedAction(null);
-      
       switch (action.type) {
-        case 'SEARCH':
-          handleSearch(action.filters);
-          break;
-        case 'JOIN':
-          setSelectedTripId(action.tripId);
-          setCurrentPage('trip-details');
-          // Modal opening will be handled by TripDetails logic when it mounts and sees verified state
-          break;
-        case 'VIBE':
-          setShowVibeModal(true);
-          break;
-        case 'TAB':
-          setCurrentPage(action.tabId);
-          break;
+        case 'SEARCH': handleSearch(action.filters); break;
+        case 'JOIN': setSelectedTripId(action.tripId); setCurrentPage('trip-details'); break;
+        case 'VIBE': setShowVibeModal(true); break;
+        case 'TAB': setCurrentPage(action.tabId); break;
       }
     } else {
       setCurrentPage('home');
@@ -184,7 +161,6 @@ const App: React.FC = () => {
       else if (n.target.screen === 'tripsTab') setCurrentPage('my-trips');
       return;
     }
-
     const gatedTabs = ['initiate-trip', 'my-trips', 'chat-inbox', 'profile'];
     if (!user && gatedTabs.includes(tab)) {
       setSuccessToast("Sign in to continue.");
@@ -192,24 +168,33 @@ const App: React.FC = () => {
       setCurrentPage('auth');
       return;
     }
-    
     setCurrentPage(tab);
   };
 
   const renderPage = () => {
-    // Note: We no longer force auth globally here to allow Explore and Trip Details for guests
     switch (currentPage) {
       case 'home':
-        return <Home user={user} allTrips={db.getTrips()} activeTrip={activeTripForHeader} onSearch={handleSearch} onSelectTrip={(t) => navigateToTrip(t.id)} onSeeAll={() => handleSearch({ location: '' })} onSOS={setSosTrip} userVibe={user?.vibeProfile || null} currency={currency} onVibeStart={() => handleVibeComplete(user?.vibeProfile || {} as VibeProfile)} onFlightSearch={() => setCurrentPage('flight-search')} />;
+        return <Home 
+          user={user} 
+          allTrips={db.getTrips()} 
+          activeTrip={activeTripForHeader} 
+          onSearch={handleSearch} 
+          onSelectTrip={(t) => navigateToTrip(t.id)} 
+          onSeeAll={() => executeSearch({ location: '' })} 
+          onSOS={setSosTrip} 
+          userVibe={user?.vibeProfile || null} 
+          currency={currency} 
+          onVibeStart={() => executeSearch({ location: '' })} 
+        />;
       case 'search-results':
         return (
           <div className="px-4 pb-32 max-w-7xl mx-auto w-full pt-8 page-transition">
             <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
               <div>
-                <h2 className="text-3xl font-black uppercase text-[#0A3D91] tracking-tighter italic">Search Results</h2>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Found {searchResults?.length || 0} matching tribes</p>
+                <h2 className="text-3xl font-black text-[#0A3D91] tracking-tighter italic">Matching Tribes</h2>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Showing {searchResults?.length || 0} active packages</p>
               </div>
-              <button onClick={() => setCurrentPage('vibe-check')} className="bg-blue-50 text-[#0A3D91] px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-100">Redo Vibe Check</button>
+              <button onClick={() => setCurrentPage('vibe-check')} className="bg-blue-50 text-[#0A3D91] px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-100 shadow-sm active:scale-95 transition-all">Redo Vibe Check</button>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {searchResults?.map(t => (
@@ -220,50 +205,14 @@ const App: React.FC = () => {
         );
       case 'vibe-check':
         if (!user) { setCurrentPage('auth'); return null; }
-        return <VibeCheckScreen onBack={() => setCurrentPage('search-results')} onJoin={() => setCurrentPage('search-results')} destination={searchFilters?.location || 'India'} />;
+        return <VibeCheckScreen 
+          onBack={() => setCurrentPage('home')} 
+          onJoin={() => executeSearch(searchFilters || { location: '' })} 
+          destination={searchFilters?.location || 'India'} 
+        />;
       case 'trip-details':
         const t = selectedTripId ? db.getTripById(selectedTripId, user?.id) : null;
-        return t ? <TripDetails 
-          trip={t} 
-          allTrips={db.getTrips()} 
-          currentUser={user} 
-          onJoin={(s, v) => { 
-            if (!user) {
-              setSuccessToast("Sign in to continue.");
-              setIntendedAction({ type: 'JOIN', tripId: selectedTripId! });
-              setCurrentPage('auth');
-              return;
-            }
-            updateUserData({ socialProfiles: s }); 
-            db.requestToJoin(selectedTripId!, user!.id); 
-            navigateToTrip(selectedTripId!); 
-          }} 
-          onKycCta={() => {
-            if (!user) {
-              setSuccessToast("Sign in to continue.");
-              setIntendedAction({ type: 'JOIN', tripId: selectedTripId! });
-              setCurrentPage('auth');
-              return;
-            }
-            setCurrentPage('profile');
-          }} 
-          currency={currency} 
-          userVibe={user?.vibeProfile || null} 
-          onVibeStart={() => {
-            if (!user) {
-              setSuccessToast("Sign in to continue.");
-              setIntendedAction({ type: 'VIBE' });
-              setCurrentPage('auth');
-              return;
-            }
-            setShowVibeModal(true);
-          }} 
-          onBack={() => setCurrentPage('home')} 
-          onSelectTripRoom={() => {
-            if (!user) { setCurrentPage('auth'); return; }
-            setCurrentPage('trip-room');
-          }} 
-        /> : <div className="p-20 text-center">Trip Not Found</div>;
+        return t ? <TripDetails trip={t} allTrips={db.getTrips()} currentUser={user} onJoin={(s, v) => { if (!user) { setSuccessToast("Sign in to continue."); setIntendedAction({ type: 'JOIN', tripId: selectedTripId! }); setCurrentPage('auth'); return; } updateUserData({ socialProfiles: s }); db.requestToJoin(selectedTripId!, user!.id); navigateToTrip(selectedTripId!); }} onKycCta={() => { if (!user) { setSuccessToast("Sign in to continue."); setIntendedAction({ type: 'JOIN', tripId: selectedTripId! }); setCurrentPage('auth'); return; } setCurrentPage('profile'); }} currency={currency} userVibe={user?.vibeProfile || null} onVibeStart={() => { if (!user) { setSuccessToast("Sign in to continue."); setIntendedAction({ type: 'VIBE' }); setCurrentPage('auth'); return; } setShowVibeModal(true); }} onBack={() => setCurrentPage('home')} onSelectTripRoom={() => { if (!user) { setCurrentPage('auth'); return; } setCurrentPage('trip-room'); }} /> : <div className="p-20 text-center">Trip Not Found</div>;
       case 'trip-room':
         if (!user) { setCurrentPage('auth'); return null; }
         return selectedTripId ? <TripRoom tripId={selectedTripId} user={user!} onBack={() => setCurrentPage('trip-details')} /> : null;
@@ -304,13 +253,13 @@ const App: React.FC = () => {
       case 'contact': return <Contact />;
       case 'about': return <About onBack={() => setCurrentPage('home')} />;
       case 'auth': return <Auth onAuthComplete={handleAuthComplete} />;
-      default: return <Home user={user} allTrips={db.getTrips()} activeTrip={activeTripForHeader} onSearch={handleSearch} onSelectTrip={(t) => navigateToTrip(t.id)} onSeeAll={() => handleSearch({ location: '' })} onSOS={setSosTrip} userVibe={user?.vibeProfile || null} currency={currency} onVibeStart={() => setShowVibeModal(true)} />;
+      default: return <Home user={user} allTrips={db.getTrips()} activeTrip={activeTripForHeader} onSearch={handleSearch} onSelectTrip={(t) => navigateToTrip(t.id)} onSeeAll={() => executeSearch({ location: '' })} onSOS={setSosTrip} userVibe={user?.vibeProfile || null} currency={currency} onVibeStart={() => executeSearch({ location: '' })} />;
     }
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8FAFF]">
-      <TopAppBar title="TRAVEL TRIBE" activeTab={currentPage} onTabChange={handleTabChange} user={user} currency={currency} onCurrencyChange={setCurrency} activeTrip={activeTripForHeader} />
+      <TopAppBar title="Travel Tribe" activeTab={currentPage} onTabChange={handleTabChange} user={user} currency={currency} onCurrencyChange={setCurrency} activeTrip={activeTripForHeader} />
       <main className="flex-1 w-full flex flex-col items-center overflow-x-hidden">{renderPage()}</main>
       <BottomNav activeTab={currentPage} onTabChange={handleTabChange} />
       <VibeModal isOpen={showVibeModal} onComplete={handleVibeComplete} onClose={() => setShowVibeModal(false)} />

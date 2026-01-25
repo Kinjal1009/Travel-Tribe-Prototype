@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { INDIAN_CITIES } from '../lib/mockData';
 import { SearchFilters, TripType } from '../types';
@@ -14,6 +13,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     budget: 'Any',
     tripType: 'Any'
   });
+
+  // Requirement: Enable button only if at least one filter is selected
+  const isSearchDisabled = !filters.location && !filters.startFrom && filters.tripType === 'Any';
 
   return (
     <div className="bg-white p-4 md:p-6 rounded-[2rem] max-w-5xl mx-auto -mt-10 md:-mt-12 relative z-10 border border-gray-100 shadow-xl">
@@ -57,7 +59,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
 
         <button 
           onClick={() => onSearch(filters)}
-          className="h-12 bg-[#0A3D91] text-white hover:bg-blue-800 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95"
+          disabled={isSearchDisabled}
+          className="h-12 bg-[#0A3D91] text-white hover:bg-blue-800 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
           Find Trips
         </button>

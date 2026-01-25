@@ -24,10 +24,10 @@ interface DbSchema {
 
 const STORAGE_KEY = 'tt_canonical_db_v3';
 const DB_VERSION_KEY = 'TT_DB_VERSION_MARKER_V3';
-const CURRENT_DB_VERSION = 'v18_locked_upcoming_trips'; // Bumped version to trigger re-seed
+const CURRENT_DB_VERSION = 'v20_flight_proposals'; 
 
 export const ASSISTANT_ID = 'VA_NONAME';
-export const ASSISTANT_NAME = 'TRAVEL TRIBE Guide';
+export const ASSISTANT_NAME = 'Travel Tribe Guide';
 export const DEV_NOTIF_TEST = true;
 
 class MockDb {
@@ -97,7 +97,6 @@ class MockDb {
     };
     this.data.users[vishnu.id] = vishnu;
 
-    // Seed Host Users for Upcoming Trips
     const upcomingHosts = [
       { id: 'user_aditi', name: 'Aditi Sharma', firstName: 'Aditi' },
       { id: 'user_rahul_iyer', name: 'Rahul Iyer', firstName: 'Rahul' },
@@ -205,12 +204,17 @@ class MockDb {
 
     let tripCounter = 0;
     const vishnuVibe = vishnu.vibeProfile!;
+
+    // Rishikesh Priority Trip (100% Vibe Match)
+    const tripRishi = this.createMockTrip(`v-rishi-${tripCounter++}`, "Yoga & Rapids: Rishikesh Vibe", "Rishikesh", "Delhi", 14500, 'OPEN', 'org_luxury', createVibeGroup(vishnuVibe, 'perfect'));
+    tripRishi.isFeatured = true;
+    tripRishi.featuredScore = 100;
+    this.data.trips[tripRishi.id] = tripRishi;
+
     const trip100 = this.createMockTrip(`v-100-${tripCounter++}`, "The Ultimate Vibe Match", "Coorg", "Bengaluru", 12000, 'OPEN', 'org_elite', createVibeGroup(vishnuVibe, 'perfect'));
     this.data.trips[trip100.id] = trip100;
 
     this.injectVishnuLifecycleScenarios(vishnu.id, todayISO);
-    
-    // Inject the 4 Specific Upcoming Locked Trips
     this.injectUpcomingLockedTrips(vishnu.id);
 
     localStorage.setItem(DB_VERSION_KEY, CURRENT_DB_VERSION);
@@ -220,7 +224,6 @@ class MockDb {
   private injectUpcomingLockedTrips(vishnuId: string) {
     const now = new Date().toISOString();
 
-    // Helper to generate a fully locked trip
     const createLockedTrip = (id: string, title: string, loc: string, hostId: string, startDate: string, endDate: string, busPrice: number, hotelPrice: number, vibePercent: number, isPartner = false) => {
       const host = this.data.users[hostId];
       const trip: Trip = {
@@ -289,22 +292,17 @@ class MockDb {
         joinedAt: '2025-01-10'
       };
 
-      // Add System Chat Messages
       this.data.chats[id] = [
-        { id: `sys_1_${id}`, tripId: id, userId: 'system', userName: 'System', text: `HOST LOCKED BUS: ${trip.bookingStateObj!.bus.proposals[0].title}`, timestamp: now },
-        { id: `sys_2_${id}`, tripId: id, userId: 'system', userName: 'System', text: `HOST LOCKED HOTEL: ${trip.bookingStateObj!.hotel.proposals[0].title}`, timestamp: now },
-        { id: `sys_3_${id}`, tripId: id, userId: 'system', userName: 'System', text: "BOOKING PHASE COMPLETE. PAYMENTS ARE NOW OPEN.", timestamp: now }
+        { id: `sys_1_${id}`, tripId: id, userId: 'system', userName: 'System', text: `Host Locked Bus: ${trip.bookingStateObj!.bus.proposals[0].title}`, timestamp: now },
+        { id: `sys_2_${id}`, tripId: id, userId: 'system', userName: 'System', text: `Host Locked Hotel: ${trip.bookingStateObj!.hotel.proposals[0].title}`, timestamp: now },
+        { id: `sys_3_${id}`, tripId: id, userId: 'system', userName: 'System', text: "Booking Phase Complete. Payments Are Now Open.", timestamp: now }
       ];
     };
 
-    // 1. Goa Monsoon Escapade
     createLockedTrip('up-goa-01', 'Goa Monsoon Escapade', 'Goa', 'user_aditi', '2026-02-13', '2026-02-17', 1450, 8500, 75);
-    // 2. Coorg Coffee Trails
     createLockedTrip('up-coorg-01', 'Coorg Coffee Trails', 'Coorg', 'user_rahul_iyer', '2026-02-20', '2026-02-24', 1250, 6800, 100);
-    // 3. Pondicherry Chill Weekend
     createLockedTrip('up-pondy-01', 'Pondicherry Chill Weekend', 'Pondicherry', 'user_sneha_m', '2026-02-28', '2026-03-01', 950, 4200, 50);
-    // 4. Ooty Tea Trails (Partner Exclusive)
-    createLockedTrip('up-ooty-01', 'Ooty Tea Trails', 'Ooty', 'user_karthik_v', '2026-03-05', '2026-03-08', 1100, 5500, 25, true);
+    createLockedTrip('up-ooty-01', 'Ooty Tea Trails (Partner Exclusive)', 'Ooty', 'user_karthik_v', '2026-03-05', '2026-03-08', 1100, 5500, 25, true);
   }
 
   private createMockTrip(id: string, title: string, loc: string, origin: string, budget: number, status: TripStatus, orgId: string, travelers: CoTraveler[]): Trip {
@@ -451,7 +449,6 @@ class MockDb {
       const tribe = Object.values(this.data.memberships).filter(m => m.tripId === trip.id && (m.state === ParticipationState.APPROVED_PAID || m.state === ParticipationState.APPROVED_UNPAID));
       t.joinedCount = tribe.length + (trip.joinedCount || 1);
       
-      // Sync participants list for hydration
       t.participants = Object.values(this.data.memberships)
         .filter(m => m.tripId === trip.id)
         .map(m => ({
@@ -505,22 +502,34 @@ class MockDb {
       this.data.memberships[id].state = ParticipationState.APPROVED_PAID;
       this.data.memberships[id].paid = true;
       const amtStr = amount ? ` ₹${amount.toLocaleString()}` : '';
-      // Requirement: System message with amount and specific emoji
       this.addChatMessage(tripId, 'system', 'System', `💳 ${user?.firstName} paid${amtStr}.`);
       this.persist();
     }
   }
 
-  proposeOption(tripId: string, type: 'BUS' | 'HOTEL', userId: string, option: any) {
+  proposeOption(tripId: string, type: 'BUS' | 'HOTEL' | 'FLIGHT', userId: string, option: any) {
     const trip = this.data.trips[tripId];
     const user = this.data.users[userId];
     if (!trip || !user) return;
     const propId = `prop_${Date.now()}`;
-    const title = option.title || option.operator || option.name;
+    const title = option.title || option.operator || option.name || option.airline;
     const isBus = type === 'BUS';
-    const messageText = isBus ? `🚌 ${user.firstName} proposed: ${title}, ${trip.startPoint}-${trip.location}, ${option.departTime}, ₹${option.price}` : `🏨 ${user.firstName} proposed: ${title}, ${option.area}, ₹${option.pricePerNight}`;
-    const proposal: Proposal = { id: propId, tripId, type, optionId: option.id || option.title, proposedByUserId: userId, userId, userName: user.name, userAvatar: user.avatarUrl, voterIds: [userId], title, provider: type === 'BUS' ? 'redBus' : 'MakeMyTrip', pricePerPerson: option.price || option.totalPrice || option.pricePerNight || 0, departTime: option.departTime, arriveTime: option.arriveTime, createdAt: formatDateDDMMYYYY(new Date()), messageText, votes: { [userId]: 'YES' } };
-    const target = type.toLowerCase() as 'bus' | 'hotel';
+    const isFlight = type === 'FLIGHT';
+    
+    let messageText = '';
+    if (isBus) messageText = `🚌 ${user.firstName} proposed BUS: ${title}, ₹${option.price}`;
+    else if (isFlight) messageText = `✈️ ${user.firstName} proposed FLIGHT: ${title}, ₹${option.price}`;
+    else messageText = `🏨 ${user.firstName} proposed STAY: ${title}, ₹${option.pricePerNight || option.totalPrice}`;
+
+    const proposal: Proposal = { 
+      id: propId, tripId, type, optionId: option.id || option.title || option.flight_number || title, 
+      proposedByUserId: userId, userId, userName: user.name, userAvatar: user.avatarUrl, 
+      voterIds: [userId], title, provider: isBus ? 'redBus' : (isFlight ? 'Google Flights' : 'MakeMyTrip'), 
+      pricePerPerson: option.price || option.totalPrice || option.pricePerNight || 0, 
+      departTime: option.departTime || option.departure_time, arriveTime: option.arriveTime || option.arrival_time, 
+      createdAt: formatDateDDMMYYYY(new Date()), messageText, votes: { [userId]: 'YES' } 
+    };
+    const target = type.toLowerCase() as 'bus' | 'hotel' | 'flight';
     if (!trip.bookingStateObj) {
       trip.bookingStateObj = { bus: { proposals: [], lockedProposalId: null, votes: {} }, flight: { proposals: [], lockedProposalId: null, votes: {} }, hotel: { proposals: [], lockedProposalId: null, votes: {} }, lifecycleStatus: BookingLifecycleStatus.PLANNING, paymentEnabled: false };
     }
@@ -530,10 +539,10 @@ class MockDb {
     return proposal;
   }
 
-  voteOnProposal(tripId: string, type: 'BUS' | 'HOTEL', proposalId: string, userId: string, vote: 'YES' | 'NO') {
+  voteOnProposal(tripId: string, type: 'BUS' | 'HOTEL' | 'FLIGHT', proposalId: string, userId: string, vote: 'YES' | 'NO') {
     const trip = this.data.trips[tripId];
     const user = this.data.users[userId];
-    const target = type.toLowerCase() as 'bus' | 'hotel';
+    const target = type.toLowerCase() as 'bus' | 'hotel' | 'flight';
     const prop = trip.bookingStateObj?.[target].proposals.find(p => p.id === proposalId);
     if (prop && user) {
       if (vote === 'YES' && !prop.voterIds.includes(userId)) {
@@ -547,17 +556,19 @@ class MockDb {
     }
   }
 
-  lockProposal(tripId: string, type: 'BUS' | 'HOTEL', proposalId: string) {
+  lockProposal(tripId: string, type: 'BUS' | 'HOTEL' | 'FLIGHT', proposalId: string) {
     const trip = this.data.trips[tripId];
-    const target = type.toLowerCase() as 'bus' | 'hotel';
+    const target = type.toLowerCase() as 'bus' | 'hotel' | 'flight';
     const prop = trip.bookingStateObj?.[target].proposals.find(p => p.id === proposalId);
     if (prop && trip.bookingStateObj) {
       trip.bookingStateObj[target].lockedProposalId = proposalId;
       this.addChatMessage(tripId, 'system', 'System', `Host locked ${type}: ${prop.title}`);
-      if (trip.bookingStateObj.bus.lockedProposalId && trip.bookingStateObj.hotel.lockedProposalId) {
+      
+      const travelLocked = trip.bookingStateObj.bus.lockedProposalId || trip.bookingStateObj.flight.lockedProposalId;
+      if (travelLocked && trip.bookingStateObj.hotel.lockedProposalId) {
         trip.bookingStateObj.paymentEnabled = true;
         trip.bookingStateObj.lifecycleStatus = BookingLifecycleStatus.PAYMENT_OPEN;
-        this.addChatMessage(tripId, 'system', 'System', "Booking Phase complete. Payments are now OPEN.");
+        this.addChatMessage(tripId, 'system', 'System', "Booking Phase Complete. Payments Are Now Open.");
       }
       this.persist();
     }

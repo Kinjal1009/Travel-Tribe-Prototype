@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { User, Trip, TripType, TravelMode, KycStatus, ItineraryDay, BookingLifecycleStatus, ParticipationState, TripStatus, CoTraveler, OrganizerProfileStats } from '../types';
 import { INDIAN_CITIES, LOCATION_IMAGE_MAP, getAutoItinerary, SEED_VERSION } from '../lib/mockData';
@@ -39,6 +38,7 @@ const InitiateTrip: React.FC<InitiateTripProps> = ({ user, allTrips, onTripCreat
   });
 
   const isVerified = user.kycStatus === KycStatus.VERIFIED;
+  const todayISO = new Date().toISOString().split('T')[0];
 
   // Sync itinerary days with date range
   useEffect(() => {
@@ -136,7 +136,6 @@ const InitiateTrip: React.FC<InitiateTripProps> = ({ user, allTrips, onTripCreat
         id: user.id,
         name: user.name,
         avatar: user.avatarUrl,
-        // Fix: Use valid VibeProfile values for default fallback
         vibeProfile: user.vibeProfile || { 
           pace: 'Balanced', 
           budget: 'Talk it out calmly', 
@@ -195,7 +194,6 @@ const InitiateTrip: React.FC<InitiateTripProps> = ({ user, allTrips, onTripCreat
         visibilityRules: { requiresKyc: true, requiresApproval: !isOrganizer },
         bookingState: BookingLifecycleStatus.PLANNING,
         userParticipation: ParticipationState.APPROVED_PAID,
-        // Added missing 'flight' property to satisfy TripBookingState interface
         bookingStateObj: { 
           bus: { proposals: [], lockedProposalId: null, votes: {} }, 
           hotel: { proposals: [], lockedProposalId: null, votes: {} }, 
@@ -323,7 +321,7 @@ const InitiateTrip: React.FC<InitiateTripProps> = ({ user, allTrips, onTripCreat
             <div className="space-y-2 pt-2">
               <label className="text-[9px] font-black uppercase text-gray-400 ml-2 tracking-widest">Preferred Travel Mode (Required)</label>
               <div className="flex gap-3">
-                {[TravelMode.BUS, TravelMode.TRAIN].map((mode) => (
+                {[TravelMode.BUS, TravelMode.TRAIN, TravelMode.FLIGHT].map((mode) => (
                   <button
                     key={mode}
                     type="button"
@@ -348,6 +346,7 @@ const InitiateTrip: React.FC<InitiateTripProps> = ({ user, allTrips, onTripCreat
                   name="DepartureDate"
                   className="w-full h-16 bg-gray-50 rounded-2xl px-6 font-bold outline-none border border-gray-100"
                   value={formData.startDate}
+                  minDate={todayISO}
                   onChange={val => {
                     const newEndDate = (formData.endDate && formData.endDate <= val) ? '' : formData.endDate;
                     setFormData({ ...formData, startDate: val, endDate: newEndDate });
@@ -363,7 +362,7 @@ const InitiateTrip: React.FC<InitiateTripProps> = ({ user, allTrips, onTripCreat
                   disabled={!formData.startDate}
                   className="w-full h-16 bg-gray-50 rounded-2xl px-6 font-bold outline-none border border-gray-100"
                   value={formData.endDate}
-                  minDate={formData.startDate ? getNextDayISO(formData.startDate) : undefined}
+                  minDate={formData.startDate ? getNextDayISO(formData.startDate) : todayISO}
                   onChange={val => setFormData({ ...formData, endDate: val })}
                   placeholder="DD/MM/YYYY"
                 />
