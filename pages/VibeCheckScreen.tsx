@@ -84,7 +84,7 @@ const ResultsView: React.FC<{ matches: Match[], onReset: () => void, onJoin: () 
           className="!h-14 shadow-xl shadow-blue-900/10"
           onClick={onJoin}
         >
-          EXPLORE MATCHING TRIBES
+          EXPLORE TRAVEL TRIBE
         </M3Button>
       </div>
     </div>

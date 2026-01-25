@@ -3,7 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { Flight, FlightSearchResponse } from '../types';
 import { M3Button, M3Card } from '../components/ui/M3Components';
 
-const MCP_SERVER_URL = 'https://google-flights-mcp-production-865a.up.railway.app/';
+const MCP_SERVER_URL = 'https://google-flights-mcp-server-production-865a.up.railway.app/';
 
 const AIRPORTS: Record<string, string> = {
   'Mumbai': 'BOM', 'Bombay': 'BOM',
@@ -96,7 +96,7 @@ const FlightSearch: React.FC<FlightSearchProps> = ({ onBack, isEmbedded = false,
     setIsThinking(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
       const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];

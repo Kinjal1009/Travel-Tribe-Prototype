@@ -184,7 +184,15 @@ const App: React.FC = () => {
           onSOS={setSosTrip} 
           userVibe={user?.vibeProfile || null} 
           currency={currency} 
-          onVibeStart={() => executeSearch({ location: '' })} 
+          onVibeStart={() => {
+            if (!user) {
+              setSuccessToast("Sign in to find your tribe.");
+              setCurrentPage('auth');
+              return;
+            }
+            setSearchFilters({ location: '' });
+            setCurrentPage('vibe-check');
+          }} 
         />;
       case 'search-results':
         return (

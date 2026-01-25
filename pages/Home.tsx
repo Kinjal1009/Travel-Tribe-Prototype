@@ -85,7 +85,7 @@ const Home: React.FC<HomeProps> = ({
             </h2>
 
             <div className="flex flex-wrap justify-center gap-4 pt-8">
-              <M3Button variant="filled" className="!h-16 !px-10 shadow-2xl" onClick={onSeeAll}>EXPLORE EXPEDITIONS</M3Button>
+              <M3Button variant="filled" className="!h-16 !px-10 shadow-2xl" onClick={onVibeStart}>EXPLORE TRAVEL TRIBE</M3Button>
             </div>
           </div>
         </div>

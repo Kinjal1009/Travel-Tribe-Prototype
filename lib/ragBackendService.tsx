@@ -1,7 +1,7 @@
 
 import { Question, Match } from '../types';
 
-const RAG_API_URL = 'https://kinjal25-rag-byop-solo-traveller.hf.space';
+const RAG_API_URL = 'https://kinjal25-rag-byop-solo-traveller.hf.space.app';
 
 export async function generateRishikeshQuiz(interests: string[]): Promise<Question[]> {
   try {
