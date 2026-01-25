@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trip, User, Currency, VibeProfile, KycStatus, ParticipationState, SocialProfiles, CoTraveler, TripRating } from '../types';
 import { M3Button, M3Card } from '../components/ui/M3Components';
@@ -10,6 +9,7 @@ import TripCreatorBadge from '../components/TripCreatorBadge';
 import OptInModal from '../components/OptInModal';
 import RatingModal from '../components/RatingModal';
 import { db } from '../lib/mockDb';
+import PaymentModal from '../components/PaymentModal';
 
 interface TripDetailsProps {
   trip: Trip;
@@ -35,6 +35,7 @@ const TripDetails: React.FC<TripDetailsProps> = ({
   trip, currentUser, onJoin, onKycCta, currency, userVibe, onBack, onSelectTripRoom, onVibeStart
 }) => {
   const [showOptIn, setShowOptIn] = useState(false);
+  const [showPay, setShowPay] = useState(false);
   const [selectedTravelerForRating, setSelectedTravelerForRating] = useState<CoTraveler | null>(null);
   const [myRatingsForTrip, setMyRatingsForTrip] = useState<TripRating[]>([]);
   
@@ -59,8 +60,23 @@ const TripDetails: React.FC<TripDetailsProps> = ({
   const isRestrictedByGender = trip.womenOnly && currentUser?.gender === 'Male';
   const participation = trip.userParticipation || ParticipationState.NOT_JOINED;
   const isApproved = participation === ParticipationState.APPROVED_PAID || participation === ParticipationState.APPROVED_UNPAID || trip.ownerId === currentUser?.id;
+  const isPaid = participation === ParticipationState.APPROVED_PAID;
   const isPending = participation === ParticipationState.REQUESTED;
   const isFull = trip.joinedCount >= trip.maxTravelers;
+
+  // Requirement: Single derived boolean used for payments
+  const booking = trip.bookingStateObj;
+  const busLocked = !!booking?.bus?.lockedProposalId;
+  const hotelLocked = !!booking?.hotel?.lockedProposalId;
+  const paymentsEligible = busLocked && hotelLocked && isApproved && !isPaid;
+
+  // Requirement: Amount calculation from locked proposals
+  const totalPayable = useMemo(() => {
+    if (!booking) return 0;
+    const busProp = booking.bus.proposals.find(p => p.id === booking.bus.lockedProposalId);
+    const hotelProp = booking.hotel.proposals.find(p => p.id === booking.hotel.lockedProposalId);
+    return (busProp?.pricePerPerson || 0) + (hotelProp?.pricePerPerson || 0);
+  }, [booking]);
 
   const displayMembers = useMemo(() => {
     const list = [...(trip.coTravelers || [])];
@@ -95,7 +111,7 @@ const TripDetails: React.FC<TripDetailsProps> = ({
   const handleCtaClick = () => {
     if (isRestrictedByGender || isFull) return;
     if (!currentUser) {
-      onJoin({} as SocialProfiles, false); // Triggers auth redirect in parent
+      onJoin({} as SocialProfiles, false); 
       return;
     }
     if (isApproved) {
@@ -285,14 +301,44 @@ const TripDetails: React.FC<TripDetailsProps> = ({
               </div>
 
               {!isTripOver && (
-                <M3Button 
-                  fullWidth 
-                  className={`!h-20 !rounded-[2rem] ${isRestrictedByGender || isFull ? 'opacity-50 grayscale' : ''}`} 
-                  onClick={handleCtaClick}
-                  disabled={isRestrictedByGender || isFull}
-                >
-                  {getCtaText()}
-                </M3Button>
+                <div className="space-y-4">
+                  <M3Button 
+                    fullWidth 
+                    className={`!h-20 !rounded-[2rem] ${isRestrictedByGender || isFull ? 'opacity-50 grayscale' : ''}`} 
+                    onClick={handleCtaClick}
+                    disabled={isRestrictedByGender || isFull}
+                  >
+                    {getCtaText()}
+                  </M3Button>
+
+                  {/* Requirement Location A: Pay Now Section */}
+                  {currentUser && (
+                    <div className="pt-2 flex flex-col items-center gap-2">
+                       {isPaid ? (
+                          <M3Button variant="tonal" fullWidth disabled className="!h-16 !rounded-2xl !bg-green-50 !text-green-600 shadow-none border-0">
+                             PAID ✅
+                          </M3Button>
+                       ) : paymentsEligible ? (
+                          <M3Button variant="filled" fullWidth className="!h-16 !rounded-2xl !bg-green-600 hover:!bg-green-700 shadow-xl shadow-green-900/20" onClick={() => setShowPay(true)}>
+                             PAY NOW ₹{totalPayable.toLocaleString()}
+                          </M3Button>
+                       ) : isApproved ? (
+                          <p className="text-[8px] font-black text-gray-400 uppercase text-center tracking-widest italic px-4">
+                             Payment unlocks after bus + hotel are locked.
+                          </p>
+                       ) : participation === ParticipationState.REQUESTED ? (
+                          <p className="text-[8px] font-black text-gray-400 uppercase text-center tracking-widest italic px-4">
+                             Approval required before payment.
+                          </p>
+                       ) : null}
+                       
+                       {/* Mandatory Debug Label */}
+                       <div className="text-[7px] font-mono text-gray-300 uppercase mt-1">
+                         DEBUG: approved={isApproved ? 'T' : 'F'} busLocked={busLocked ? 'T' : 'F'} hotelLocked={hotelLocked ? 'T' : 'F'} hasPaid={isPaid ? 'T' : 'F'} total={totalPayable}
+                       </div>
+                    </div>
+                  )}
+                </div>
               )}
               
               <div className="flex items-center justify-center gap-2">
@@ -325,6 +371,15 @@ const TripDetails: React.FC<TripDetailsProps> = ({
           traveler={selectedTravelerForRating}
           initialRating={myRatingsForTrip.find(r => r.ratedUserId === selectedTravelerForRating.id)}
           onSubmit={handleRatingSubmit}
+        />
+      )}
+      {showPay && (
+        <PaymentModal 
+          isOpen={showPay} 
+          onClose={() => setShowPay(false)} 
+          onConfirm={() => { db.markPaid(trip.id, currentUser!.id, totalPayable); setShowPay(false); }} 
+          amount={totalPayable} 
+          itemLabel="Locked Expedition Pack" 
         />
       )}
     </div>
